@@ -82,7 +82,7 @@ class CenterNet(object):
         #   创建centernet模型
         #----------------------------------------#
         self.centernet = centernet(self.input_shape,num_classes=self.num_classes,backbone=self.backbone,mode='predict')
-        self.centernet.load_weights(self.model_path)
+        self.centernet.load_weights(self.model_path, by_name=True)
         
         print('{} model, anchors, and classes loaded.'.format(self.model_path))
 
