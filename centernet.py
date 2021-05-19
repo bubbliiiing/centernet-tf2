@@ -1,21 +1,16 @@
 import colorsys
 import os
-import pickle
 
-import cv2
 import numpy as np
 import tensorflow as tf
-from PIL import Image, ImageDraw, ImageFont
-from tensorflow.keras import backend as K
-from tensorflow.keras.layers import Input
+from PIL import ImageDraw, ImageFont
 
 from nets.centernet import centernet
 from utils.utils import centernet_correct_boxes, letterbox_image, nms
 
-
 def preprocess_image(image):
-    mean = [0.40789655, 0.44719303, 0.47026116]
-    std = [0.2886383, 0.27408165, 0.27809834]
+    mean    = [0.40789655, 0.44719303, 0.47026116]
+    std     = [0.2886383 , 0.27408165, 0.27809834]
     return ((np.float32(image) / 255.) - mean) / std
 
 #--------------------------------------------#
@@ -102,6 +97,11 @@ class CenterNet(object):
     #   检测图片
     #---------------------------------------------------#
     def detect_image(self, image):
+        #---------------------------------------------------------#
+        #   在这里将图像转换成RGB图像，防止灰度图在预测时报错。
+        #---------------------------------------------------------#
+        image = image.convert('RGB')
+        
         image_shape = np.array(np.shape(image)[0:2])
         #---------------------------------------------------------#
         #   给图像增加灰条，实现不失真的resize

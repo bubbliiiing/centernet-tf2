@@ -3,9 +3,10 @@ import tensorflow as tf
 from tensorflow import keras
 from tensorflow.keras.callbacks import (EarlyStopping, ReduceLROnPlateau,
                                         TensorBoard)
-from utils.utils import ModelCheckpoint
-from nets.center_training import Generator
+
+from nets.centernet_training import Generator, LossHistory
 from nets.centernet import centernet
+from utils.utils import ModelCheckpoint
 
 gpus = tf.config.experimental.list_physical_devices(device_type='GPU')
 for gpu in gpus:
@@ -86,11 +87,12 @@ if __name__ == "__main__":
     #   reduce_lr用于设置学习率下降的方式
     #   early_stopping用于设定早停，val_loss多次不下降自动结束训练，表示模型基本收敛
     #-------------------------------------------------------------------------------#
-    logging = TensorBoard(log_dir="logs")
+    logging = TensorBoard(log_dir="logs/")
     checkpoint = ModelCheckpoint('logs/ep{epoch:03d}-loss{loss:.3f}-val_loss{val_loss:.3f}.h5',
         monitor='val_loss', save_weights_only=True, save_best_only=False, period=1)
     reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=2, verbose=1)
     early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=6, verbose=1)
+    loss_history = LossHistory("logs/")
 
     if backbone == "resnet50":
         freeze_layer = 171
@@ -111,10 +113,10 @@ if __name__ == "__main__":
     #   提示OOM或者显存不足请调小Batch_size
     #------------------------------------------------------#
     if True:
-        Lr = 1e-3
-        Batch_size = 4
-        Init_Epoch = 0
-        Freeze_Epoch = 50
+        Lr              = 1e-3
+        Batch_size      = 4
+        Init_Epoch      = 0
+        Freeze_Epoch    = 50
 
         gen = Generator(Batch_size, lines[:num_train], lines[num_train:], input_shape, num_classes)
 
@@ -123,36 +125,48 @@ if __name__ == "__main__":
             optimizer=keras.optimizers.Adam(Lr)
         )
 
+        epoch_size      = num_train // Batch_size
+        epoch_size_val  = num_val // Batch_size
+
+        if epoch_size == 0 or epoch_size_val == 0:
+            raise ValueError("数据集过小，无法进行训练，请扩充数据集。")
+
         model.fit(gen.generate(True), 
-                steps_per_epoch=num_train//Batch_size,
+                steps_per_epoch=epoch_size,
                 validation_data=gen.generate(False),
-                validation_steps=num_val//Batch_size,
+                validation_steps=epoch_size_val,
                 epochs=Freeze_Epoch, 
                 verbose=1,
                 initial_epoch=Init_Epoch,
-                callbacks=[logging, checkpoint, reduce_lr, early_stopping])
+                callbacks=[logging, checkpoint, reduce_lr, early_stopping, loss_history])
 
     for i in range(freeze_layer):
         model.layers[i].trainable = True
 
     if True:
-        Lr = 1e-4
-        Batch_size = 4
-        Freeze_Epoch = 50
-        Epoch = 100
+        Lr              = 1e-4
+        Batch_size      = 4
+        Freeze_Epoch    = 50
+        Epoch           = 100
         
-        gen = Generator(Batch_size, lines[:num_train], lines[num_train:], input_shape, num_classes)
+        gen             = Generator(Batch_size, lines[:num_train], lines[num_train:], input_shape, num_classes)
 
         model.compile(
             loss={'centernet_loss': lambda y_true, y_pred: y_pred},
             optimizer=keras.optimizers.Adam(Lr)
         )
 
+        epoch_size = num_train // Batch_size
+        epoch_size_val = num_val // Batch_size
+
+        if epoch_size == 0 or epoch_size_val == 0:
+            raise ValueError("数据集过小，无法进行训练，请扩充数据集。")
+
         model.fit(gen.generate(True), 
-                steps_per_epoch=num_train//Batch_size,
+                steps_per_epoch=epoch_size,
                 validation_data=gen.generate(False),
-                validation_steps=num_val//Batch_size,
+                validation_steps=epoch_size_val,
                 epochs=Epoch, 
                 verbose=1,
                 initial_epoch=Freeze_Epoch,
-                callbacks=[logging, checkpoint, reduce_lr, early_stopping])
+                callbacks=[logging, checkpoint, reduce_lr, early_stopping, loss_history])

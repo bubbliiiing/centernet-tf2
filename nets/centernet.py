@@ -1,12 +1,8 @@
 import tensorflow as tf
-import tensorflow.keras.backend as K
-from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
-                                     Conv2DTranspose, Dropout, Input, Lambda,
-                                     MaxPooling2D, Reshape, ZeroPadding2D)
+from tensorflow.keras.layers import Input, Lambda, MaxPooling2D
 from tensorflow.keras.models import Model
-from tensorflow.keras.regularizers import l2
 
-from nets.center_training import loss
+from nets.centernet_training import loss
 from nets.hourglass import HourglassNetwork
 from nets.resnet import ResNet50, centernet_head
 

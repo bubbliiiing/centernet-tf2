@@ -1,11 +1,8 @@
-import math
+import warnings
 
 import numpy as np
 import tensorflow as tf
-import tensorflow.keras
 from PIL import Image
-from tensorflow.keras import backend as K
-
 
 def letterbox_image(image, size):
     iw, ih = image.size

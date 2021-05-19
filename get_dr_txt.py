@@ -1,13 +1,8 @@
-import colorsys
-import copy
-import math
 import os
-import pickle
 
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-from tensorflow.keras.layers import Input
 from tqdm import tqdm
 
 from centernet import CenterNet
@@ -33,8 +28,8 @@ for gpu in gpus:
 如果想要设定mAP0.x，比如设定mAP0.75，可以去get_map.py设定MINOVERLAP。
 '''
 def preprocess_image(image):
-    mean = [0.40789655, 0.44719303, 0.47026116]
-    std = [0.2886383, 0.27408165, 0.27809834]
+    mean    = [0.40789655, 0.44719303, 0.47026116]
+    std     = [0.2886383 , 0.27408165, 0.27809834]
     return ((np.float32(image) / 255.) - mean) / std
     
 class mAP_CenterNet(CenterNet):
@@ -45,6 +40,11 @@ class mAP_CenterNet(CenterNet):
         f = open("./input/detection-results/"+image_id+".txt","w") 
         self.confidence = 0.01
         self.nms_threhold = 0.5
+        #---------------------------------------------------------#
+        #   在这里将图像转换成RGB图像，防止灰度图在预测时报错。
+        #---------------------------------------------------------#
+        image = image.convert('RGB')
+
         image_shape = np.array(np.shape(image)[0:2])
         #---------------------------------------------------------#
         #   给图像增加灰条，实现不失真的resize

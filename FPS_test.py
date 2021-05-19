@@ -1,15 +1,8 @@
-import colorsys
-import copy
-import math
-import os
-import pickle
 import time
 
 import numpy as np
 import tensorflow as tf
 from PIL import Image
-from tensorflow.keras.layers import Input
-from tqdm import tqdm
 
 from centernet import CenterNet
 from nets.centernet import centernet
@@ -27,12 +20,17 @@ video.py里面测试的FPS会低于该FPS，因为摄像头的读取频率有限
 '''
 
 def preprocess_image(image):
-    mean = [0.40789655, 0.44719303, 0.47026116]
-    std = [0.2886383, 0.27408165, 0.27809834]
+    mean    = [0.40789655, 0.44719303, 0.47026116]
+    std     = [0.2886383 , 0.27408165, 0.27809834]
     return ((np.float32(image) / 255.) - mean) / std
 
 class FPS_CenterNet(CenterNet):
     def get_FPS(self, image, test_interval):
+        #---------------------------------------------------------#
+        #   在这里将图像转换成RGB图像，防止灰度图在预测时报错。
+        #---------------------------------------------------------#
+        image = image.convert('RGB')
+
         image_shape = np.array(np.shape(image)[0:2])
         #---------------------------------------------------------#
         #   给图像增加灰条，实现不失真的resize
@@ -66,7 +64,6 @@ class FPS_CenterNet(CenterNet):
             
             boxes = centernet_correct_boxes(top_ymin,top_xmin,top_ymax,top_xmax,np.array([self.input_shape[0],self.input_shape[1]]),image_shape)
 
-         
         t1 = time.time()
         for _ in range(test_interval):
             preds = self.get_pred(photo).numpy()
