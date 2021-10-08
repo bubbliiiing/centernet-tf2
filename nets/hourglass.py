@@ -1,8 +1,9 @@
 import tensorflow.keras.backend as K
-from tensorflow.keras.layers import (Activation, Add, BatchNormalization, Conv2D, Input, UpSampling2D,
+from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.layers import (Activation, Add, BatchNormalization,
+                                     Conv2D, Input, UpSampling2D,
                                      ZeroPadding2D)
 from tensorflow.keras.models import Model
-from tensorflow.keras.initializers import RandomNormal
 
 
 def conv2d(x, k, out_dim, name, stride=1):
@@ -102,17 +103,17 @@ def right_features(leftfeatures, hgid, dims):
 
 
 def create_heads(num_classes, rf1, hgid):
-    y1 = Conv2D(256, 3, kernel_initializer=RandomNormal(stddev=0.02), use_bias=True, padding='same', name='hm.%d.0.conv' % hgid)(rf1)
+    y1 = Conv2D(256, 3, use_bias=True, kernel_initializer=RandomNormal(stddev=0.02), padding='same', name='hm.%d.0.conv' % hgid)(rf1)
     y1 = Activation('relu', name='hm.%d.0.relu' % hgid)(y1)
     y1 = Conv2D(num_classes, 1, use_bias=True, name='hm.%d.1' % hgid, activation = "sigmoid")(y1)
 
-    y2 = Conv2D(256, 3, kernel_initializer=RandomNormal(stddev=0.02), use_bias=True, padding='same', name='wh.%d.0.conv' % hgid)(rf1)
+    y2 = Conv2D(256, 3, use_bias=True, kernel_initializer=RandomNormal(stddev=0.02), padding='same', name='wh.%d.0.conv' % hgid)(rf1)
     y2 = Activation('relu', name='wh.%d.0.relu' % hgid)(y2)
     y2 = Conv2D(2, 1, use_bias=True, name='wh.%d.1' % hgid)(y2)
 
-    y3 = Conv2D(256, 3, kernel_initializer=RandomNormal(stddev=0.02), use_bias=True, padding='same', name='reg.%d.0.conv' % hgid)(rf1)
+    y3 = Conv2D(256, 3, use_bias=True, kernel_initializer=RandomNormal(stddev=0.02), padding='same', name='reg.%d.0.conv' % hgid)(rf1)
     y3 = Activation('relu', name='reg.%d.0.relu' % hgid)(y3)
-    y3 = Conv2D(2, 1, use_bias=True, name='reg.%d.1' % hgid)(y3)
+    y3 = Conv2D(2, 1, use_bias=True, kernel_initializer=RandomNormal(stddev=0.02), name='reg.%d.1' % hgid)(y3)
 
     return [y1,y2,y3]
 
@@ -136,10 +137,10 @@ def HourglassNetwork(inpnuts, num_stacks, num_classes, cnv_dim=256, dims=[256, 3
         _heads, inter = hourglass_module(num_classes, inter, cnv_dim, i, dims)
         outputs.append(_heads)
         if i < num_stacks - 1:
-            inter_ = Conv2D(cnv_dim, 1, kernel_initializer=RandomNormal(stddev=0.02), use_bias=False, name='inter_.%d.0' % i)(prev_inter)
+            inter_ = Conv2D(cnv_dim, 1, use_bias=False, kernel_initializer=RandomNormal(stddev=0.02), name='inter_.%d.0' % i)(prev_inter)
             inter_ = BatchNormalization(epsilon=1e-5, name='inter_.%d.1' % i)(inter_)
 
-            cnv_ = Conv2D(cnv_dim, 1, kernel_initializer=RandomNormal(stddev=0.02), use_bias=False, name='cnv_.%d.0' % i)(inter)
+            cnv_ = Conv2D(cnv_dim, 1, use_bias=False, kernel_initializer=RandomNormal(stddev=0.02), name='cnv_.%d.0' % i)(inter)
             cnv_ = BatchNormalization(epsilon=1e-5, name='cnv_.%d.1' % i)(cnv_)
 
             inter = Add(name='inters.%d.inters.add' % i)([inter_, cnv_])

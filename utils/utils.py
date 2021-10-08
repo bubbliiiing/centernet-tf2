@@ -1,210 +1,46 @@
-import warnings
-
 import numpy as np
-import tensorflow as tf
 from PIL import Image
 
-def letterbox_image(image, size):
-    iw, ih = image.size
-    w, h = size
-    scale = min(w/iw, h/ih)
-    nw = int(iw*scale)
-    nh = int(ih*scale)
+#---------------------------------------------------------#
+#   将图像转换成RGB图像，防止灰度图在预测时报错。
+#   代码仅仅支持RGB图像的预测，所有其它类型的图像都会转化成RGB
+#---------------------------------------------------------#
+def cvtColor(image):
+    if len(np.shape(image)) == 3 and np.shape(image)[-2] == 3:
+        return image 
+    else:
+        image = image.convert('RGB')
+        return image 
 
-    image = image.resize((nw,nh), Image.BICUBIC)
-    new_image = Image.new('RGB', size, (128,128,128))
-    new_image.paste(image, ((w-nw)//2, (h-nh)//2))
+#---------------------------------------------------#
+#   对输入图像进行resize
+#---------------------------------------------------#
+def resize_image(image, size, letterbox_image):
+    iw, ih  = image.size
+    w, h    = size
+    if letterbox_image:
+        scale   = min(w/iw, h/ih)
+        nw      = int(iw*scale)
+        nh      = int(ih*scale)
+
+        image   = image.resize((nw,nh), Image.BICUBIC)
+        new_image = Image.new('RGB', size, (128,128,128))
+        new_image.paste(image, ((w-nw)//2, (h-nh)//2))
+    else:
+        new_image = image.resize((w, h), Image.BICUBIC)
     return new_image
 
-def centernet_correct_boxes(top, left, bottom, right, input_shape, image_shape):
-    new_shape = image_shape*np.min(input_shape/image_shape)
+#---------------------------------------------------#
+#   获得类
+#---------------------------------------------------#
+def get_classes(classes_path):
+    with open(classes_path, encoding='utf-8') as f:
+        class_names = f.readlines()
+    class_names = [c.strip() for c in class_names]
+    return class_names, len(class_names)
 
-    offset = (input_shape-new_shape)/2./input_shape
-    scale = input_shape/new_shape
-
-    box_yx = np.concatenate(((top+bottom)/2,(left+right)/2),axis=-1)
-    box_hw = np.concatenate((bottom-top,right-left),axis=-1)
-
-    box_yx = (box_yx - offset) * scale
-    box_hw *= scale
-
-    box_mins = box_yx - (box_hw / 2.)
-    box_maxes = box_yx + (box_hw / 2.)
-    boxes =  np.concatenate([
-        box_mins[:, 0:1],
-        box_mins[:, 1:2],
-        box_maxes[:, 0:1],
-        box_maxes[:, 1:2]
-    ],axis=-1)
-    boxes *= np.concatenate([image_shape, image_shape],axis=-1)
-    return boxes
-
-def nms(results, nms):
-    outputs = []
-    # 对每一个图片进行处理
-    for i in range(len(results)):
-        #------------------------------------------------#
-        #   具体过程可参考
-        #   https://www.bilibili.com/video/BV1Lz411B7nQ
-        #------------------------------------------------#
-        detections = results[i]
-        unique_class = np.unique(detections[:,-1])
-
-        best_box = []
-        if len(unique_class) == 0:
-            results.append(best_box)
-            continue
-        # 对种类进行循环，
-        # 非极大抑制的作用是筛选出一定区域内属于同一种类得分最大的框，
-        # 对种类进行循环可以帮助我们对每一个类分别进行非极大抑制。
-        for c in unique_class:
-            cls_mask = detections[:,-1] == c
-
-            detection = detections[cls_mask]
-            scores = detection[:,4]
-            # 根据得分对该种类进行从大到小排序。
-            arg_sort = np.argsort(scores)[::-1]
-            detection = detection[arg_sort]
-            while np.shape(detection)[0]>0:
-                # 每次取出得分最大的框，计算其与其它所有预测框的重合程度，重合程度过大的则剔除。
-                best_box.append(detection[0])
-                if len(detection) == 1:
-                    break
-                ious = iou(best_box[-1],detection[1:])
-                detection = detection[1:][ious<nms]
-        outputs.append(best_box)
-    return outputs
-
-def iou(b1,b2):
-    b1_x1, b1_y1, b1_x2, b1_y2 = b1[0], b1[1], b1[2], b1[3]
-    b2_x1, b2_y1, b2_x2, b2_y2 = b2[:, 0], b2[:, 1], b2[:, 2], b2[:, 3]
-
-    inter_rect_x1 = np.maximum(b1_x1, b2_x1)
-    inter_rect_y1 = np.maximum(b1_y1, b2_y1)
-    inter_rect_x2 = np.minimum(b1_x2, b2_x2)
-    inter_rect_y2 = np.minimum(b1_y2, b2_y2)
-    
-    inter_area = np.maximum(inter_rect_x2 - inter_rect_x1, 0) * \
-                 np.maximum(inter_rect_y2 - inter_rect_y1, 0)
-    
-    area_b1 = (b1_x2-b1_x1)*(b1_y2-b1_y1)
-    area_b2 = (b2_x2-b2_x1)*(b2_y2-b2_y1)
-    
-    iou = inter_area/np.maximum((area_b1+area_b2-inter_area),1e-6)
-    return iou
-
-def draw_gaussian(heatmap, center, radius, k=1):
-    diameter = 2 * radius + 1
-    gaussian = gaussian2D((diameter, diameter), sigma=diameter / 6)
-
-    x, y = int(center[0]), int(center[1])
-
-    height, width = heatmap.shape[0:2]
-
-    left, right = min(x, radius), min(width - x, radius + 1)
-    top, bottom = min(y, radius), min(height - y, radius + 1)
-
-    masked_heatmap = heatmap[y - top:y + bottom, x - left:x + right]
-    masked_gaussian = gaussian[radius - top:radius + bottom, radius - left:radius + right]
-    if min(masked_gaussian.shape) > 0 and min(masked_heatmap.shape) > 0:  # TODO debug
-        np.maximum(masked_heatmap, masked_gaussian * k, out=masked_heatmap)
-    return heatmap
-
-def gaussian2D(shape, sigma=1):
-    m, n = [(ss - 1.) / 2. for ss in shape]
-    y, x = np.ogrid[-m:m + 1, -n:n + 1]
-
-    h = np.exp(-(x * x + y * y) / (2 * sigma * sigma))
-    h[h < np.finfo(h.dtype).eps * h.max()] = 0
-    return h
-
-def gaussian_radius(det_size, min_overlap=0.7):
-    height, width = det_size
-
-    a1 = 1
-    b1 = (height + width)
-    c1 = width * height * (1 - min_overlap) / (1 + min_overlap)
-    sq1 = np.sqrt(b1 ** 2 - 4 * a1 * c1)
-    r1 = (b1 + sq1) / 2
-
-    a2 = 4
-    b2 = 2 * (height + width)
-    c2 = (1 - min_overlap) * width * height
-    sq2 = np.sqrt(b2 ** 2 - 4 * a2 * c2)
-    r2 = (b2 + sq2) / 2
-
-    a3 = 4 * min_overlap
-    b3 = -2 * min_overlap * (height + width)
-    c3 = (min_overlap - 1) * width * height
-    sq3 = np.sqrt(b3 ** 2 - 4 * a3 * c3)
-    r3 = (b3 + sq3) / 2
-    return min(r1, r2, r3)
-
-
-class ModelCheckpoint(tf.keras.callbacks.Callback):
-    def __init__(self, filepath, monitor='val_loss', verbose=0,
-                 save_best_only=False, save_weights_only=False,
-                 mode='auto', period=1):
-        super(ModelCheckpoint, self).__init__()
-        self.monitor = monitor
-        self.verbose = verbose
-        self.filepath = filepath
-        self.save_best_only = save_best_only
-        self.save_weights_only = save_weights_only
-        self.period = period
-        self.epochs_since_last_save = 0
-
-        if mode not in ['auto', 'min', 'max']:
-            warnings.warn('ModelCheckpoint mode %s is unknown, '
-                          'fallback to auto mode.' % (mode),
-                          RuntimeWarning)
-            mode = 'auto'
-
-        if mode == 'min':
-            self.monitor_op = np.less
-            self.best = np.Inf
-        elif mode == 'max':
-            self.monitor_op = np.greater
-            self.best = -np.Inf
-        else:
-            if 'acc' in self.monitor or self.monitor.startswith('fmeasure'):
-                self.monitor_op = np.greater
-                self.best = -np.Inf
-            else:
-                self.monitor_op = np.less
-                self.best = np.Inf
-
-    def on_epoch_end(self, epoch, logs=None):
-        logs = logs or {}
-        self.epochs_since_last_save += 1
-        if self.epochs_since_last_save >= self.period:
-            self.epochs_since_last_save = 0
-            filepath = self.filepath.format(epoch=epoch + 1, **logs)
-            if self.save_best_only:
-                current = logs.get(self.monitor)
-                if current is None:
-                    warnings.warn('Can save best model only with %s available, '
-                                  'skipping.' % (self.monitor), RuntimeWarning)
-                else:
-                    if self.monitor_op(current, self.best):
-                        if self.verbose > 0:
-                            print('\nEpoch %05d: %s improved from %0.5f to %0.5f,'
-                                  ' saving model to %s'
-                                  % (epoch + 1, self.monitor, self.best,
-                                     current, filepath))
-                        self.best = current
-                        if self.save_weights_only:
-                            self.model.save_weights(filepath, overwrite=True)
-                        else:
-                            self.model.save(filepath, overwrite=True)
-                    else:
-                        if self.verbose > 0:
-                            print('\nEpoch %05d: %s did not improve' %
-                                  (epoch + 1, self.monitor))
-            else:
-                if self.verbose > 0:
-                    print('\nEpoch %05d: saving model to %s' % (epoch + 1, filepath))
-                if self.save_weights_only:
-                    self.model.save_weights(filepath, overwrite=True)
-                else:
-                    self.model.save(filepath, overwrite=True)
+def preprocess_input(image):
+    image   = np.array(image,dtype = np.float32)[:, :, ::-1]
+    mean    = [0.40789655, 0.44719303, 0.47026116]
+    std     = [0.2886383, 0.27408165, 0.27809834]
+    return (image / 255. - mean) / std

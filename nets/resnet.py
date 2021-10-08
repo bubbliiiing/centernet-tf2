@@ -1,12 +1,14 @@
 #-------------------------------------------------------------#
 #   ResNet50的网络部分
 #-------------------------------------------------------------#
+from __future__ import print_function
+
 from tensorflow.keras import layers
-from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
-                                     Conv2DTranspose, Dropout, MaxPooling2D,
-                                     ZeroPadding2D)
-from tensorflow.keras.regularizers import l2
 from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
+                          Conv2DTranspose, Dropout, MaxPooling2D,
+                          ZeroPadding2D)
+from tensorflow.keras.regularizers import l2
 
 
 def identity_block(input_tensor, kernel_size, filters, stage, block):
@@ -20,7 +22,7 @@ def identity_block(input_tensor, kernel_size, filters, stage, block):
     x = BatchNormalization(name=bn_name_base + '2a')(x)
     x = Activation('relu')(x)
 
-    x = Conv2D(filters2, kernel_size, padding='same', kernel_initializer=RandomNormal(stddev=0.02), name=conv_name_base + '2b', use_bias=False)(x)
+    x = Conv2D(filters2, kernel_size,padding='same', kernel_initializer=RandomNormal(stddev=0.02), name=conv_name_base + '2b', use_bias=False)(x)
     x = BatchNormalization(name=bn_name_base + '2b')(x)
     x = Activation('relu')(x)
 
@@ -65,7 +67,7 @@ def ResNet50(inputs):
     # 512x512x3
     x = ZeroPadding2D((3, 3))(inputs)
     # 256,256,64
-    x = Conv2D(64, (7, 7), kernel_initializer=RandomNormal(stddev=0.02), strides=(2, 2), name='conv1', use_bias=False)(x)
+    x = Conv2D(64, (7, 7), strides=(2, 2), kernel_initializer=RandomNormal(stddev=0.02), name='conv1', use_bias=False)(x)
     x = BatchNormalization(name='bn_conv1')(x)
     x = Activation('relu')(x)
 
