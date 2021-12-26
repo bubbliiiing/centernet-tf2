@@ -130,7 +130,7 @@ class CenternetDatasets(keras.utils.Sequence):
         return [batch_images, batch_hms, batch_whs, batch_regs, batch_reg_masks, batch_indices], np.zeros((self.batch_size,))
 
     def generate(self):
-        i = 0
+        index = 0
         while True:
             batch_images    = np.zeros((self.batch_size, self.input_shape[0], self.input_shape[1], 3), dtype=np.float32)
             batch_hms       = np.zeros((self.batch_size, self.output_shape[0], self.output_shape[1], self.num_classes), dtype=np.float32)
@@ -144,7 +144,7 @@ class CenternetDatasets(keras.utils.Sequence):
                 #   训练时进行数据的随机增强
                 #   验证时不进行数据的随机增强
                 #---------------------------------------------------#
-                image, box  = self.get_random_data(self.annotation_lines[i], self.input_shape, random = self.train)
+                image, box  = self.get_random_data(self.annotation_lines[index], self.input_shape, random = self.train)
 
                 if len(box) != 0:
                     boxes = np.array(box[:, :4],dtype=np.float32)
@@ -185,6 +185,7 @@ class CenternetDatasets(keras.utils.Sequence):
                         #---------------------------------------------------#
                         batch_indices[b, i]     = ct_int[1] * self.output_shape[0] + ct_int[0]
 
+                index           = (index+1) % self.length
                 batch_images[b] = preprocess_input(image)
             yield batch_images, batch_hms, batch_whs, batch_regs, batch_reg_masks, batch_indices
 
