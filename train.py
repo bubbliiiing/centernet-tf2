@@ -199,7 +199,6 @@ if __name__ == "__main__":
     num_train   = len(train_lines)
     num_val     = len(val_lines)
 
-
     #------------------------------------------------------#
     #   主干特征提取网络特征通用，冻结训练可以加快训练速度
     #   也可以在训练初期防止权值被破坏。
@@ -229,8 +228,8 @@ if __name__ == "__main__":
         #   判断当前batch_size与64的差别，自适应调整学习率
         #-------------------------------------------------------------------#
         nbs     = 64
-        Init_lr_fit = max(batch_size / nbs * Init_lr, 1e-4)
-        Min_lr_fit  = max(batch_size / nbs * Min_lr, 1e-6)
+        Init_lr_fit = max(batch_size / nbs * Init_lr, 3e-4)
+        Min_lr_fit  = max(batch_size / nbs * Min_lr, 3e-6)
 
         #---------------------------------------#
         #   获得学习率下降的公式
@@ -280,8 +279,8 @@ if __name__ == "__main__":
                     #   判断当前batch_size与64的差别，自适应调整学习率
                     #-------------------------------------------------------------------#
                     nbs     = 64
-                    Init_lr_fit = max(batch_size / nbs * Init_lr, 1e-4)
-                    Min_lr_fit  = max(batch_size / nbs * Min_lr, 1e-6)
+                    Init_lr_fit = max(batch_size / nbs * Init_lr, 3e-4)
+                    Min_lr_fit  = max(batch_size / nbs * Min_lr, 3e-6)
                     #---------------------------------------#
                     #   获得学习率下降的公式
                     #---------------------------------------#
