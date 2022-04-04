@@ -135,7 +135,6 @@ if __name__ == "__main__":
     #------------------------------------------------------------------#
     #   Freeze_Train    是否进行冻结训练
     #                   默认先冻结主干训练后解冻训练。
-    #                   如果设置Freeze_Train=False，建议使用优化器为sgd
     #------------------------------------------------------------------#
     Freeze_Train        = True
     
@@ -238,7 +237,7 @@ if __name__ == "__main__":
         #-------------------------------------------------------------------#
         nbs             = 64
         lr_limit_max    = 5e-4 if optimizer_type == 'adam' else 5e-2
-        lr_limit_min    = 2e-4 if optimizer_type == 'adam' else 5e-4
+        lr_limit_min    = 2.5e-4 if optimizer_type == 'adam' else 5e-4
         Init_lr_fit     = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
         Min_lr_fit      = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
 
@@ -291,7 +290,7 @@ if __name__ == "__main__":
                     #-------------------------------------------------------------------#
                     nbs             = 64
                     lr_limit_max    = 5e-4 if optimizer_type == 'adam' else 5e-2
-                    lr_limit_min    = 2e-4 if optimizer_type == 'adam' else 5e-4
+                    lr_limit_min    = 2.5e-4 if optimizer_type == 'adam' else 5e-4
                     Init_lr_fit     = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
                     Min_lr_fit      = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
                     #---------------------------------------#
@@ -375,7 +374,7 @@ if __name__ == "__main__":
                 #-------------------------------------------------------------------#
                 nbs             = 64
                 lr_limit_max    = 5e-4 if optimizer_type == 'adam' else 5e-2
-                lr_limit_min    = 2e-4 if optimizer_type == 'adam' else 5e-4
+                lr_limit_min    = 2.5e-4 if optimizer_type == 'adam' else 5e-4
                 Init_lr_fit     = min(max(batch_size / nbs * Init_lr, lr_limit_min), lr_limit_max)
                 Min_lr_fit      = min(max(batch_size / nbs * Min_lr, lr_limit_min * 1e-2), lr_limit_max * 1e-2)
                 #---------------------------------------#
