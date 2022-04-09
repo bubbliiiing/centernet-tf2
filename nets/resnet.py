@@ -4,7 +4,7 @@
 from __future__ import print_function
 
 from tensorflow.keras import layers
-from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.initializers import RandomNormal, Constant
 from tensorflow.keras.layers import (Activation, BatchNormalization, Conv2D,
                           Conv2DTranspose, Dropout, MaxPooling2D,
                           ZeroPadding2D)
@@ -116,20 +116,20 @@ def centernet_head(x,num_classes):
         x = Activation('relu')(x)
     # 最终获得128,128,64的特征层
     # hm header
-    y1 = Conv2D(64, 3, padding='same', use_bias=False, kernel_initializer=RandomNormal(stddev=0.02), kernel_regularizer=l2(5e-4))(x)
+    y1 = Conv2D(64, 3, padding='same', use_bias=False, kernel_initializer=RandomNormal(stddev=0.02))(x)
     y1 = BatchNormalization()(y1)
     y1 = Activation('relu')(y1)
-    y1 = Conv2D(num_classes, 1, kernel_initializer=RandomNormal(stddev=0.02), kernel_regularizer=l2(5e-4), activation='sigmoid')(y1)
+    y1 = Conv2D(num_classes, 1, kernel_initializer=Constant(0), bias_initializer=Constant(-2.19), activation='sigmoid')(y1)
 
     # wh header
-    y2 = Conv2D(64, 3, padding='same', use_bias=False, kernel_initializer=RandomNormal(stddev=0.02), kernel_regularizer=l2(5e-4))(x)
+    y2 = Conv2D(64, 3, padding='same', use_bias=False, kernel_initializer=RandomNormal(stddev=0.02))(x)
     y2 = BatchNormalization()(y2)
     y2 = Activation('relu')(y2)
-    y2 = Conv2D(2, 1, kernel_initializer=RandomNormal(stddev=0.02), kernel_regularizer=l2(5e-4))(y2)
+    y2 = Conv2D(2, 1, kernel_initializer=RandomNormal(stddev=0.02))(y2)
 
     # reg header
-    y3 = Conv2D(64, 3, padding='same', use_bias=False, kernel_initializer=RandomNormal(stddev=0.02), kernel_regularizer=l2(5e-4))(x)
+    y3 = Conv2D(64, 3, padding='same', use_bias=False, kernel_initializer=RandomNormal(stddev=0.02))(x)
     y3 = BatchNormalization()(y3)
     y3 = Activation('relu')(y3)
-    y3 = Conv2D(2, 1, kernel_initializer=RandomNormal(stddev=0.02), kernel_regularizer=l2(5e-4))(y3)
+    y3 = Conv2D(2, 1, kernel_initializer=RandomNormal(stddev=0.02))(y3)
     return y1, y2, y3

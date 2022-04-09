@@ -1,5 +1,5 @@
 import tensorflow.keras.backend as K
-from tensorflow.keras.initializers import RandomNormal
+from tensorflow.keras.initializers import RandomNormal, Constant
 from tensorflow.keras.layers import (Activation, Add, BatchNormalization,
                                      Conv2D, Input, UpSampling2D,
                                      ZeroPadding2D)
@@ -105,7 +105,7 @@ def right_features(leftfeatures, hgid, dims):
 def create_heads(num_classes, rf1, hgid):
     y1 = Conv2D(256, 3, use_bias=True, kernel_initializer=RandomNormal(stddev=0.02), padding='same', name='hm.%d.0.conv' % hgid)(rf1)
     y1 = Activation('relu', name='hm.%d.0.relu' % hgid)(y1)
-    y1 = Conv2D(num_classes, 1, use_bias=True, name='hm.%d.1' % hgid, activation = "sigmoid")(y1)
+    y1 = Conv2D(num_classes, 1, use_bias=True, kernel_initializer=Constant(0), bias_initializer=Constant(-2.19), name='hm.%d.1' % hgid, activation = "sigmoid")(y1)
 
     y2 = Conv2D(256, 3, use_bias=True, kernel_initializer=RandomNormal(stddev=0.02), padding='same', name='wh.%d.0.conv' % hgid)(rf1)
     y2 = Activation('relu', name='wh.%d.0.relu' % hgid)(y2)
