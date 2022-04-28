@@ -57,7 +57,6 @@ def fit_one_epoch(net, loss_history, optimizer, epoch, epoch_step, epoch_step_va
         for iteration, batch in enumerate(gen):
             if iteration>=epoch_step:
                 break
-            batch = [tf.convert_to_tensor(part) for part in batch]
             batch_images, batch_hms, batch_whs, batch_regs, batch_reg_masks, batch_indices = batch
 
             loss_value = train_step(batch_images, batch_hms, batch_whs, batch_regs, batch_reg_masks, batch_indices, net, optimizer)
