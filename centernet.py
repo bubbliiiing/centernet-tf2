@@ -72,7 +72,6 @@ class CenterNet(object):
     #---------------------------------------------------#
     def __init__(self, **kwargs):
         self.__dict__.update(self._defaults)
-        show_config(**self._defaults)
         self.heatmap = False
         for name, value in kwargs.items():
             setattr(self, name, value)
@@ -92,6 +91,8 @@ class CenterNet(object):
 
         self.bbox_util = BBoxUtility(nms_thresh=self.nms_iou)
         self.generate()
+        
+        show_config(**self._defaults)
 
     #---------------------------------------------------#
     #   载入模型
