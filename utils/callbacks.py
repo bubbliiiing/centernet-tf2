@@ -106,7 +106,7 @@ class EvalCallback(keras.callbacks.Callback):
         self.eval_flag          = eval_flag
         self.period             = period
         
-        self.bbox_util = BBoxUtility(self.num_classes, nms_thresh=self.nms_iou)
+        self.bbox_util = BBoxUtility(nms_thresh=self.nms_iou)
         
         self.maps       = [0]
         self.epoches    = [0]
