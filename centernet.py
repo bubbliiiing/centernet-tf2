@@ -75,8 +75,6 @@ class CenterNet(object):
         self.heatmap = False
         for name, value in kwargs.items():
             setattr(self, name, value)
-            if name == "heatmap" and value == True:
-                self.heatmap = True
         #---------------------------------------------------#
         #   计算总的类的数量
         #---------------------------------------------------#
