@@ -139,13 +139,16 @@ def centernet(input_shape, num_classes, backbone='resnet50', max_objects=100, mo
         if mode=="train":
             loss_ = Lambda(loss, name='centernet_loss')([y1, y2, y3, hm_input, wh_input, reg_input, reg_mask_input, index_input])
             model = Model(inputs=[image_input, hm_input, wh_input, reg_input, reg_mask_input, index_input], outputs=[loss_])
-            return model
+            
+            detections          = Lambda(lambda x: decode(*x, max_objects=max_objects))([y1, y2, y3])
+            prediction_model    = Model(inputs=image_input, outputs=detections)
+            return model, prediction_model
         elif mode=="predict":
-            detections = Lambda(lambda x: decode(*x, max_objects=max_objects))([y1, y2, y3])
-            prediction_model = Model(inputs=image_input, outputs=detections)
+            detections          = Lambda(lambda x: decode(*x, max_objects=max_objects))([y1, y2, y3])
+            prediction_model    = Model(inputs=image_input, outputs=detections)
             return prediction_model
         elif mode=="heatmap":
-            prediction_model = Model(inputs=image_input, outputs=y1)
+            prediction_model    = Model(inputs=image_input, outputs=y1)
             return prediction_model
 
     else:
@@ -154,19 +157,23 @@ def centernet(input_shape, num_classes, backbone='resnet50', max_objects=100, mo
         if mode=="train":
             loss_all = []
             for out in outs:  
-                y1, y2, y3 = out
-                loss_ = Lambda(loss)([y1, y2, y3, hm_input, wh_input, reg_input, reg_mask_input, index_input])
+                y1, y2, y3  = out
+                loss_       = Lambda(loss)([y1, y2, y3, hm_input, wh_input, reg_input, reg_mask_input, index_input])
                 loss_all.append(loss_)
-            loss_all = Lambda(tf.reduce_mean, name='centernet_loss')(loss_all)
+            loss_all        = Lambda(tf.reduce_mean, name='centernet_loss')(loss_all)
 
-            model = Model(inputs=[image_input, hm_input, wh_input, reg_input, reg_mask_input, index_input], outputs=loss_all)
-            return model
+            model           = Model(inputs=[image_input, hm_input, wh_input, reg_input, reg_mask_input, index_input], outputs=loss_all)
+            
+            y1, y2, y3          = outs[-1]
+            detections          = Lambda(lambda x: decode(*x, max_objects=max_objects))([y1, y2, y3])
+            prediction_model    = Model(inputs=image_input, outputs=[detections])
+            return model, prediction_model
         elif mode=="predict":
-            y1, y2, y3 = outs[-1]
-            detections = Lambda(lambda x: decode(*x, max_objects=max_objects))([y1, y2, y3])
-            prediction_model = Model(inputs=image_input, outputs=[detections])
+            y1, y2, y3          = outs[-1]
+            detections          = Lambda(lambda x: decode(*x, max_objects=max_objects))([y1, y2, y3])
+            prediction_model    = Model(inputs=image_input, outputs=[detections])
             return prediction_model
         elif mode=="heatmap":
-            y1, y2, y3 = outs[-1]
-            prediction_model = Model(inputs=image_input, outputs=y1)
+            y1, y2, y3          = outs[-1]
+            prediction_model    = Model(inputs=image_input, outputs=y1)
             return prediction_model
