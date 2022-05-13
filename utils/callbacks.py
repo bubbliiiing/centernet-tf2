@@ -122,6 +122,9 @@ class EvalCallback(keras.callbacks.Callback):
     
     def get_map_txt(self, image_id, image, class_names, map_out_path):
         f = open(os.path.join(map_out_path, "detection-results/"+image_id+".txt"),"w") 
+        #---------------------------------------------------#
+        #   获得输入图片的高和宽
+        #---------------------------------------------------#
         image_shape = np.array(np.shape(image)[0:2])
         #---------------------------------------------------------#
         #   在这里将图像转换成RGB图像，防止灰度图在预测时报错。
@@ -132,27 +135,36 @@ class EvalCallback(keras.callbacks.Callback):
         #   给图像增加灰条，实现不失真的resize
         #   也可以直接resize进行识别
         #---------------------------------------------------------#
-        image_data  = resize_image(image, (self.input_shape[1], self.input_shape[0]), self.letterbox_image)
+        image_data = resize_image(image, (self.input_shape[1], self.input_shape[0]), self.letterbox_image)
         #---------------------------------------------------------#
         #   添加上batch_size维度，图片预处理，归一化。
         #---------------------------------------------------------#
-        image_data  = preprocess_input(np.expand_dims(np.array(image_data, dtype='float32'), 0))
+        image_data = np.expand_dims(preprocess_input(np.array(image_data, dtype='float32')), 0)
 
-        preds       = [x.numpy() for x in self.get_pred(image_data)]
-        #-----------------------------------------------------------#
-        #   将预测结果进行解码
-        #-----------------------------------------------------------#
-        results     = self.bbox_util.decode_box(preds, self.anchors, image_shape, 
-                                                self.input_shape, self.letterbox_image, confidence=self.confidence)
+        outputs    = self.get_pred(image_data).numpy()
+        #--------------------------------------------------------------------------------------------#
+        #   centernet后处理的过程，包括门限判断和传统非极大抑制。
+        #   对于centernet网络来讲，确立中心非常重要。对于大目标而言，会存在许多的局部信息。
+        #   此时大目标中心点比较难以确定。使用最大池化的非极大抑制方法无法去除局部框
+        #   这里面存在传统的nms处理方法，可以选择关闭和开启。
+        #   实际测试中，hourglass为主干网络时有无额外的nms相差不大，resnet相差较大。
+        #--------------------------------------------------------------------------------------------#
+        results = self.bbox_util.postprocess(outputs, self.nms, image_shape, self.input_shape, self.letterbox_image, confidence=self.confidence)
+
         #--------------------------------------#
         #   如果没有检测到物体，则返回原图
         #--------------------------------------#
-        if results[0] is None: 
+        if results[0] is None:
             return 
 
-        top_label   = results[0][:, 5]
+        top_label   = np.array(results[0][:, 5], dtype = 'int32')
         top_conf    = results[0][:, 4]
         top_boxes   = results[0][:, :4]
+
+        top_100     = np.argsort(top_label)[::-1][:self.max_boxes]
+        top_boxes   = top_boxes[top_100]
+        top_conf    = top_conf[top_100]
+        top_label   = top_label[top_100]
 
         for i, c in list(enumerate(top_label)):
             predicted_class = self.class_names[int(c)]
